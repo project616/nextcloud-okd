@@ -1,0 +1,135 @@
+def templateName = 'nextcloud'
+def build = true
+
+def liveTag = "blue"
+def altTag = "green"
+def qa_tag = "qa-ready"
+
+/* The default active service on test environment */
+def active = "nextcloud-blue"
+
+def dev_project = "nextcloud-staging"
+def qa_project = "nextcloud-qa"
+
+def redirectFollowingDownload( String url, String filename ) {
+  while( url ) {
+    new URL( url ).openConnection().with { conn ->
+      conn.instanceFollowRedirects = false
+      url = conn.getHeaderField( "Location" )
+      if( !url ) {
+        new File( filename ).withOutputStream { out ->
+          conn.inputStream.with { inp ->
+            out << inp
+            inp.close()
+          }
+        }
+      }
+    }
+  }
+}
+
+pipeline {
+  agent any
+
+  options {
+	timeout(time: 20, unit: 'MINUTES')
+  }
+
+  stages {
+	stage('preamble') {
+		steps {
+			script {
+				openshift.withCluster() {
+					//redirectFollowingDownload(wks_cli_url, target_cli);
+					openshift.withProject() {
+						echo "Using working dir: ${workspace}"
+						echo "Using project: ${openshift.project()}"
+						/**
+						 *	Get the info about who is currently the production dc,
+						 *	for debug purposes, suppose we have blue as live and
+						 *	green as idle ...
+						**/
+						sh "oc get route ${templateName} -n ${openshift.project()} -o jsonpath='{ .spec.to.name }' > activeservice"
+						active = readFile('activeservice').trim()
+						echo "Current active Service is: ${active}"
+						if (active == "nextcloud-blue") {
+							liveTag = "green"
+							altTag = "blue"
+						}
+					}
+				}
+			}
+		}
+	}
+	stage('build') {
+		steps {
+			script {
+				openshift.withCluster() {
+					openshift.withProject() {
+						if (build == true) {
+							openshiftBuild bldCfg: templateName + "-build", namespace: "${openshift.project()}"
+						}
+					}
+				}
+			}
+		}
+	}
+	stage('Deploy app (Not Live)') {
+		steps {
+			script {
+				openshift.withCluster() {
+					openshift.withProject() {
+						def rm = openshift.selector("dc", templateName).rollout()
+						openshiftDeploy depCfg: "${templateName}-${liveTag}", namespace: "${openshift.project()}"
+					}
+				}
+			}
+		}
+	}
+	stage('Go LIVE (Switching routes)') {
+		steps {
+			script {
+				openshift.withCluster() {
+					echo "GO LIVE switching the backends"
+					sh "oc set route-backends ${templateName} ${templateName}-${liveTag}=100 ${templateName}-${altTag}=0 -n ${openshift.project()}"
+					sh "oc label svc ${templateName}-${altTag} app=${templateName}-idle --overwrite -n ${openshift.project()}"
+					sh "oc label svc ${templateName}-${liveTag} app=${templateName}-live --overwrite -n ${openshift.project()}"
+					sleep 10
+				}
+			}
+		}
+	}
+	stage('make tests') {
+		steps {
+			echo "Here I want some tests against the new deploymentconfig ..."
+		}
+	}
+	stage('Promote to Q/A ENV') {
+		steps {
+			timeout(time: 1, unit: 'MINUTES') {
+			input 'Deploy to Q/A?'
+			}
+			sh "oc set triggers dc/${qa_project} --from-image=${qa_project}/${templateName}-build:${qa_tag} -c ${templateName} -n ${qa_project}"
+			sh "oc tag ${dev_project}/${templateName}-build:latest ${qa_project}/${templateName}-build:${qa_tag}"
+		}
+	}
+  }
+	post {
+		always {
+			echo 'TODO: Here I just want a Summary'
+		}
+		success {
+			echo 'TODO: This will run only if successful'
+		}
+		failure {
+			echo 'TODO: This will run only if failed'
+		}
+		unstable {
+			echo 'TODO: This will run only if the run was marked as unstable'
+		}
+		changed {
+			echo 'This will run only if the state of the Pipeline has changed'
+			echo 'For example, if the Pipeline was previously failing but is now successful'
+		}
+	}
+}

@@ -1,0 +1,184 @@
+apiversion: v1
+kind: Template
+metadata:
+  name: nextcloud-nginx
+  annotations:
+    description: "Nextcloud Reverse proxy"
+    tags: "nextcloud"
+
+
+parameters:
+
+- name: NGINX_HTTP_PORT
+  description: "The port bound to Nginx service"
+  required: true
+  value: "8080"
+
+- name: NGINX_HTTPS_PORT
+  description: "The port bound to Nginx service"
+  required: true
+  value: "8443"
+
+- name: NGINX_REPLICA_COUNT
+  description: "The Nginx replica count"
+  required: true
+  value: "1"
+
+- name: NGINX_SERVICE
+  description: "The Nginx service name"
+  required: true
+  value: "nginx"
+
+- name: NGINX_IMAGE
+  description: "The Nginx image name"
+  required: true
+  value: "docker.io/nginx"
+
+- name: NGINX_TAG_IMAGE
+  description: "The Nginx tag image to use"
+  required: true
+  value: "alpine"
+
+- name: NGINX_MAIN_CONF
+  description: "The Nginx configmap that contains the /etc/nginx.conf"
+  required: true
+  value: nginx-conf
+
+- name: NGINX_VHOST_CONFIG
+  description: "The Nginx configmap that contains the config"
+  required: true
+  value: nginx-vhost
+
+- name: NGINX_ROUTE_SUFFIX
+  description: "The suffix used by the route"
+  required: true
+  value: ".<YOURDOMAIN>"
+
+
+objects:
+
+#- apiVersion: v1
+#  kind: Route
+#  metadata:
+#    labels:
+#      app: nginx
+#    name: ${NGINX_SERVICE}
+#  spec:
+#    host: ${NGINX_SERVICE}${NGINX_ROUTE_SUFFIX}
+#    tls:
+#      insecureEdgeTerminationPolicy: Redirect
+#      termination: edge
+#    wildcardPolicy: None
+#    to:
+#      kind: Service
+#      name: ${NGINX_SERVICE}
+#      weight: "100"
+#    wildcardPolicy: None
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NGINX_SERVICE}
+    name: ${NGINX_SERVICE}
+  spec:
+    ports:
+    - name: nginx-https
+      port: "${{NGINX_HTTPS_PORT}}"
+    - name: nginx-http
+      port: "${{NGINX_HTTP_PORT}}"
+    selector:
+      deploymentconfig: ${NGINX_SERVICE}
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: ${NGINX_SERVICE}
+    labels:
+      app: ${NGINX_SERVICE}
+      variant: blue
+  spec:
+    selector:
+      deploymentconfig: ${NGINX_SERVICE}
+    replicas: ${NGINX_REPLICA_COUNT}
+    strategy:
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: ${NGINX_SERVICE}
+          deploymentconfig: ${NGINX_SERVICE}
+        name: ${NGINX_SERVICE}
+      spec:
+        containers:
+        - image: ${NGINX_IMAGE}:${NGINX_TAG_IMAGE}
+          imagePullPolicy: Always
+          name: ${NGINX_SERVICE}
+          ports:
+          - containerPort: "${{NGINX_HTTP_PORT}}"
+            protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: ${NGINX_MAIN_CONF}
+              mountPath: /etc/nginx/
+            - name: nginx-config
+              mountPath: /etc/nginx/conf
+            - name: nginx-ssl
+              mountPath: /etc/nginx/certs/
+            - name: ${NGINX_VHOST_CONFIG}
+              mountPath: /etc/nginx/conf.d/
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+        volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-ssl
+          secret:
+            secretName: nginx-ssl
+            items:
+              - key: server.crt
+                path: "server.crt"
+              - key: server.key
+                path: "server.key"
+        - name: ${NGINX_MAIN_CONF}
+          configMap:
+            name: ${NGINX_MAIN_CONF}
+            defaultMode: 0644
+            items:
+              - key: "nginx.conf"
+                path: "nginx.conf"
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+            defaultMode: 0644
+            items:
+              - key: "headers_params"
+                path: "headers_params"
+              - key: "proxy_params"
+                path: "proxy_params"
+              - key: "ssl_params"
+                path: "ssl_params"
+              - key: "mime.types"
+                path: "mime.types"
+        - name: ${NGINX_VHOST_CONFIG}
+          configMap:
+            name: ${NGINX_VHOST_CONFIG}
+            defaultMode: 0644
+            items:
+              - key: "nextcloud.<YOURDOMAIN>"
+                path: "nextcloud.<YOURDOMAIN>"
+    triggers:
+    - type: ConfigChange

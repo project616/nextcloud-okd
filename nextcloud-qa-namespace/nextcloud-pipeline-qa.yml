@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  name: nextcloud-pipeline-qa
+spec:
+  output: {}
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    git:
+      ref: master
+      uri: http://github.com/project616/nextcloud.git
+    sourceSecret:
+      name: "buildbot-auth"
+    contextDir: nextcloud-qa-namespace
+    type: Git
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfilePath: jenkinsfile
+    type: JenkinsPipeline

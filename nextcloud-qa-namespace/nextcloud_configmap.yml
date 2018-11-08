@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-config
+
+data:
+  config.php: |
+    <?php
+      $CONFIG = array (
+      "debug" => false,
+      "log_type" => "owncloud",
+      "logfile" => "/var/www/html/nextcloud.log",
+      "loglevel" => "3",
+      "auth.bruteforce.protection.enabled" => false,
+      "logtimezone" => "Europe/Rome",
+      "skeletondirectory" => "/config/userskeleton",
+      "knowledgebaseenabled" => true,
+      "log_rotate_size" => 0,
+      "enable_previews" => true,
+      "preview_max_x" => 480,
+      "preview_max_y" => 480,
+      "preview_max_scale_factor" => 1,
+      "preview_max_filesize_image" => 10,
+      "logdateformat" => "F d, Y H:i:s",
+      "datadirectory" => '{{ data_directory }}',
+      "updatechecker" => false,
+      "check_for_working_htaccess" => false,
+      "check_data_directory_permissions" => false,
+      "asset-pipeline.enabled" => false,
+      "assetdirectory" => '{{ asset_directory }}',
+      "dbtype" => "mysql",
+      "filelocking.enabled" => true,
+      "filelocking.ttl" => 60*60,
+      "integrity.check.disabled" => true,
+      "version" => '13.0.4.0',
+      "dbname" => '{{ dbname }}',
+      "dbhost" => '{{ dbhost }}',
+      "dbtableprefix" => 'oc_',
+      "dbuser" => '{{ dbuser }}',
+      "mysql.utf8mb4" => true,
+      "dbpassword" => '{{ dbpassword }}',
+      "installed" => true,
+      "memcache.distributed" => '\OC\Memcache\Redis',
+      "memcache.locking" => '\\OC\\Memcache\\Redis',
+      "memcache.local" => '\OC\Memcache\Redis',
+      'redis.cluster' => [
+        'seeds' => [ // provide some/all of the cluster servers to bootstrap discovery, port required
+                'redis-cluster-node-0:6379',
+                'redis-cluster-node-1:6379',
+                'redis-cluster-node-2:6379',
+                'redis-cluster-node-3:6379',
+                'redis-cluster-node-4:6379',
+                'redis-cluster-node-5:6379',
+        ],
+        'timeout' => 0.0,
+        'read_timeout' => 0.0,
+        'failover_mode' => \RedisCluster::FAILOVER_ERROR
+      ],
+      "apps_paths" => array(
+         0 =>
+          array (
+              'path'=> '{{ apps_directory }}',
+              'url' => '/apps',
+              'writable' => true,
+          ),
+          1 =>
+          array (
+              'path' => '{{ apps_directory }}',
+              'url' => '/apps-appstore',
+              'writable' => true,
+          ),
+        ),
+      'trusted_domains' =>
+        array (
+          0 => 'nextcloud.dix.io',
+        ),
+
+      /*'objectstore' => array(
+      'class' => 'OC\Files\ObjectStore\S3',
+      'arguments' => array(
+          'bucket' => '{{ bucket_name }}',
+          'autocreate' => true,
+          'key'    => '{{ accesskey }}',
+          'secret' => '{{ secretkey }}',
+          'hostname' => '{{ s3_endpoint }}',
+          'port' => '{{ s3_port }}',
+          'use_ssl' => true,
+          'region' => 'optional',
+          // required for some non amazon s3 implementations
+          'use_path_style'=> true
+          ),
+        ),*/
+      'ldapIgnoreNamingRules' => false,
+      'ldapProviderFactory' => '\\OCA\\User_LDAP\\LDAPProviderFactory',
+     );

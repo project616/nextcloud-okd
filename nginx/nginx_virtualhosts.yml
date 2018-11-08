@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-vhost
+
+data:
+  nextcloud.<YOURDOMAIN>.conf: |
+    server {
+      listen 80;
+      server_name nextcloud.<YOURDOMAIN>;
+      return 301 https://$host$request_uri;
+    }
+
+    server {
+      listen 443 ssl http2;
+      server_name nextcloud.<YOURDOMAIN>;
+
+      ssl_certificate /etc/nginx/certs/server.crt;
+      ssl_certificate_key /etc/nginx/certs/server.key;
+
+      include /etc/nginx/conf/ssl_params.conf;
+      include /etc/nginx/conf/headers_params;
+
+      client_max_body_size 10G;
+
+      location / {
+        proxy_pass https://nextcloud.<YOURDOMAIN>;
+        include /etc/nginx/conf/proxy_params;
+      }
+    }
+  mime.types: |
+    types {
+        text/html                             html htm shtml;
+        text/css                              css;
+        text/xml                              xml;
+        image/gif                             gif;
+        image/jpeg                            jpeg jpg;
+        application/javascript                js;
+        application/atom+xml                  atom;
+        application/rss+xml                   rss;
+
+        text/mathml                           mml;
+        text/plain                            txt;
+        text/vnd.sun.j2me.app-descriptor      jad;
+        text/vnd.wap.wml                      wml;
+        text/x-component                      htc;
+
+        image/png                             png;
+        image/tiff                            tif tiff;
+        image/vnd.wap.wbmp                    wbmp;
+        image/x-icon                          ico;
+        image/x-jng                           jng;
+        image/x-ms-bmp                        bmp;
+        image/svg+xml                         svg svgz;
+        image/webp                            webp;
+
+        application/font-woff                 woff;
+        application/java-archive              jar war ear;
+        application/json                      json;
+        application/mac-binhex40              hqx;
+        application/msword                    doc;
+        application/pdf                       pdf;
+        application/postscript                ps eps ai;
+        application/rtf                       rtf;
+        application/vnd.apple.mpegurl         m3u8;
+        application/vnd.ms-excel              xls;
+        application/vnd.ms-fontobject         eot;
+        application/vnd.ms-powerpoint         ppt;
+        application/vnd.wap.wmlc              wmlc;
+        application/vnd.google-earth.kml+xml  kml;
+        application/vnd.google-earth.kmz      kmz;
+        application/x-7z-compressed           7z;
+        application/x-cocoa                   cco;
+        application/x-java-archive-diff       jardiff;
+        application/x-java-jnlp-file          jnlp;

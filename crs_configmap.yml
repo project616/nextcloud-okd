@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crs-config
+  namespace: nextcloud-staging
+
+data:
+  crs-setup.conf: |
+    SecDefaultAction "phase:1,log,auditlog,pass"
+    SecDefaultAction "phase:2,log,auditlog,pass"
+    SecCollectionTimeout 600
+    SecAction \
+     "id:900990,\
+      phase:1,\
+      nolog,\
+      pass,\
+      t:none,\
+      setvar:tx.crs_setup_version=300"
+  REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf: |
+    # <SETUP RULES>
+    #
+  RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf: |
+    # <SETUP RULES>
+    #

@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-config-prod
+  namespace: nextcloud-prod
+
+data:
+  config.php: |
+    <?php
+      $CONFIG = array (
+      "log_type" => "syslog",
+      "datadirectory" => '{{ data_directory }}',
+      "updatechecker" => false,
+      "check_for_working_htaccess" => false,
+      "asset-pipeline.enabled" => false,
+      "assetdirectory" => '{{ asset_directory }}',
+      'dbtype' => 'mysql',
+      'version' => '13.0.4',
+      'dbname' => '{{ dbname }}',
+      'dbhost' => '{{ dbhost }}',
+      'dbtableprefix' => 'oc_',
+      'dbuser' => '{{ dbuser }}',
+      'dbpassword' => '{{ dbpassword }}',
+      'installed' => true,
+
+      "apps_paths" => array(
+         0 =>
+          array (
+              'path'=> '{{ apps_directory }}',
+              'url' => '/apps',
+              'writable' => true,
+          ),
+          1 =>
+          array (
+              'path' => '{{ apps_directory }}',
+              'url' => '/apps-appstore',
+              'writable' => true,
+          ),
+        ),
+
+      'objectstore' => array(
+      'class' => 'OC\Files\ObjectStore\S3',
+      'arguments' => array(
+          'bucket' => '{{ bucket_name }}',
+          'autocreate' => true,
+          'key'    => '{{ accesskey }}',
+          'secret' => '{{ secretkey }}',
+          'hostname' => '{{ s3_endpoint }}',
+          'port' => '{{ s3_port }}',
+          'use_ssl' => true,
+          'region' => 'optional',
+          // required for some non amazon s3 implementations
+          'use_path_style'=> true
+          ),
+        ),
+     );

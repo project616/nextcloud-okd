@@ -1,0 +1,66 @@
+def templateName = 'nextcloud'
+
+def dev_project = "nextcloud-staging"
+def prod_project = "nextcloud-prod"
+def qa_project = "nextcloud-qa"
+def prod_tag = "prod-ready"
+
+pipeline {
+  agent any
+
+  options {
+	timeout(time: 20, unit: 'MINUTES') 
+  }
+  stages {
+	stage('preamble') {
+		steps {
+			script {
+				openshift.withCluster() {
+					openshift.withProject() {
+						echo "Starting pipeline using namespace: ${openshift.project()}"
+					}
+				}
+			}
+		}
+	}
+	stage('make tests') {
+		steps {
+			echo "Here I want some tests against the current deploymentconfig ..."
+		}
+	}
+	stage('Promote to production ENV') {
+		steps {
+			timeout(time: 1, unit: 'HOURS') {
+				input 'Deploy to PRODUCTION ENVIRONMENT?'
+			}
+
+			/* Tag the image with prod-ready tag to trigger the production deployment
+			*  .. if something change in the deployment config it seems that doesn't 
+			*  react to any trigger given by "ImageChange", so we need to explicitely
+			*  force the rollout of the application running a new depCfg rollout.
+			*/
+			sh "oc set triggers dc/${prod_project} --from-image=${prod_project}/${templateName}-build:${prod_tag} -c ${templateName} -n ${prod_project}"
+			sh "oc tag ${qa_project}/${templateName}-build:qa-ready ${prod_project}/${templateName}-build:${prod_tag}"
+			//sh "oc rollout latest dc/nextcloud-prod -m ${prod_project}"
+		}
+	}
+	}
+	post {
+		always {
+			echo 'Here I just want a Summary'
+		}
+		success {
+			echo 'This will run only if successful'
+		}
+		failure {
+			echo 'This will run only if failed'
+		}
+		unstable {
+			echo 'This will run only if the run was marked as unstable'
+		}
+		changed {
+			echo 'This will run only if the state of the Pipeline has changed'
+			echo 'For example, if the Pipeline was previously failing but is now successful'
+		}
+	}
+}

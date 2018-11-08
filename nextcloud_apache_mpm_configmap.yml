@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-apache-mpm
+
+data:
+  mpm_prefork.conf: |
+    <IfModule mpm_prefork_module>
+        StartServers              5
+        MinSpareServers           5
+        MaxSpareServers          10
+        MaxRequestWorkers       256
+        MaxConnectionsPerChild   0
+    </IfModule>
+

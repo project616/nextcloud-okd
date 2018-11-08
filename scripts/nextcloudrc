@@ -1,0 +1,24 @@
+[default]
+data_directory=/var/www/html/data
+asset_directory=/var/www/html/data
+apps_directory=/var/www/html/apps
+
+[s3]
+s3_endpoint=mys3endpoint3
+s3_port=443
+bucket_name=nextcloud
+accesskey=<accesskey>
+secretkey=<secretkey>
+
+[mariadb]
+dbname = nextcloud
+dbuser = nextcloud
+dbpassword = Nextcloud01!
+dbhost = maxscale.external.service.resolved
+
+[s4]
+dskopcdjpos=DOES NOT EXIST
+cdspocspoc=ABCDEFGHIJ
+
+[etcd]
+endpoint=http://<YOUR_ETCD_ENDPOINT>

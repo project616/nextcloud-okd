@@ -1,0 +1,102 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  generation: 2
+  labels:
+    app: nextcloud
+  name: nextcloud
+  namespace: nextcloud-standalone
+spec:
+  replicas: 1
+  selector:
+    deploymentconfig: nextcloud-standalone
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nextcloud
+        deploymentconfig: nextcloud
+      name: nextcloud
+    spec:
+      containers:
+      - env:
+        - name: ETCD
+          value: http://<ETCD_ENDPOINT>
+        - name: TARGET_FILE
+          value: /var/www/html/config/config.php
+        - name: ROOT_NODE
+          value: nextcloud
+        - name: ENTRY
+          value: /entrypoint.sh
+        image: docker-registry.default.svc:5000/nextcloud-standalone/nextcloud-build:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 20
+        name: nextcloud
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lock
+          name: nextcloud-locks
+        - mountPath: /var/run
+          name: nextcloud-run
+        - mountPath: /usr/share/mycloud-config
+          name: nextcloud-config
+        - mountPath: /usr/share/swiftrc
+          name: swiftrc
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - emptyDir: {}
+        name: nextcloud-locks
+      - emptyDir: {}
+        name: nextcloud-run
+      - emptyDir: {}
+        name: configdir
+      - name: swiftrc
+        secret:
+          defaultMode: 420
+          secretName: swift-secret
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: config.php
+            path: config.php
+          name: nextcloud-config
+        name: nextcloud-config
+  test: false
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - nextcloud
+      from:
+        kind: ImageStreamTag
+        name: nextcloud-build:latest
+        namespace: nextcloud-standalone
+    type: ConfigChange
