@@ -1,0 +1,64 @@
+# Images and buildconfig definitions for ETCD service base containers
+apiVersion: v1
+kind: ImageStream
+metadata:
+  name: "centos-base"
+  annotations:
+    tags: "mycloud,centos,base-image,docker"
+    openshift.io/display-name: "CentOS"
+    openshift.io/provider-display-name: "https://centos.org"
+spec:
+  imagePullPolicy: IfNotPresent
+  tags:
+    - name: "latest"
+      annotations:
+        openshift.io/display-name: "CentOS"
+        openshift.io/provider-display-name: "https://centos.org"
+      from:
+        kind: "DockerImage"
+        name: "docker.io/centos:latest"
+      referencePolicy:
+        type: "Local"
+
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  name: "nextcloud-etcd"
+  annotations:
+    tags: "mycloud,etcd,service_discovery,infrastructure"
+    openshift.io/display-name: "Nextcloud ETCd Base Image"
+
+---
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  name: "nextcloud-etcd"
+  annotations:
+    tags: "mycloud,etcd,service_discovery,infrastructure"
+    openshift.io/display-name: "Nextcloud ETCd Base Image"
+spec:
+  runPolicy: "Serial"
+  # Build from this embedded Dockerfile
+  source:
+    git:
+      uri: http://github.com/project616/nextcloud-okd.git
+    context: etcd
+      #sourceSecret:
+      #name: "buildbot-auth"
+  strategy:
+    dockerStrategy:
+      from:
+        kind: "ImageStreamTag"
+        name: "centos-base:latest"
+      dockerFilePath: "Dockerfile"
+      noCache: false
+      forcePull: false
+  triggers:
+    - type: "ConfigChange"
+    - type: "ImageChange"
+  # Push built image into the embedded OpenShift registry
+  output:
+    to:
+      kind: "ImageStreamTag"
+      name: "nextcloud-etcd:latest"

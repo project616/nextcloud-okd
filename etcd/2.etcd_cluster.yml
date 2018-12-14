@@ -1,0 +1,16 @@
+# Application service, balances nodes
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: etcd-cluster
+  name: etcd-cluster-service
+spec:
+  ports:
+  - name: etcd-client-port
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  selector:
+    app: etcd-cluster
+  type: ClusterIP

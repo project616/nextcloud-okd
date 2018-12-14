@@ -1,0 +1,15 @@
+kind: Route
+apiVersion: v1
+id: etcd-route
+metadata:
+  annotations:
+    description: Route for Nextcloud ETCD
+  labels:
+    app: etcd-cluster
+  name: etcd-cluster-route
+spec:
+  host: "etcd.mydomain.local"
+  to:
+    kind: Service
+    name: etcd-cluster-service
+
