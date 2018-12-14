@@ -1,2 +1,4 @@
 scripts/hosts
+redis/redis-trib
+redis/scripts/trib/
 certs/

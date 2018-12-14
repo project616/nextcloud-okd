@@ -1,0 +1,89 @@
+#  Redis Node Template for Openshift Origin
+#  Mycloud dev project
+# Persistent Volumes
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-claim-2
+spec:
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: "5Gi"
+
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: redis-cluster-node-2-rc
+spec:
+  replicas: 1
+  selector:
+    name: redis-cluster-node-2
+    app: redis-cluster
+  template:
+    metadata:
+      labels:
+        name: redis-cluster-node-2
+        redis_node: redis-cluster-node-2
+        app: redis-cluster
+    spec:
+      containers:
+      - image: "docker-registry.default.svc:5000/nextcloud-okd/redis-nextcloud:latest"
+        name: redis-cluster-node-2
+        command:
+          - "/tmp/run_redis.sh"
+        args:
+          - "-n"
+          - "redis-cluster-node-2"
+          - "-r"
+          - "master"
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
+        - containerPort: 16379
+          name: sentinel
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        volumeMounts:
+          - mountPath: /var/lib/redis
+            name: redis-claim-2
+          - mountPath: /etc/redis
+            name: redis-config
+      volumes:
+      - name: redis-claim-2
+        persistentVolumeClaim:
+          claimName: redis-claim-2
+      - name: redis-config
+        configMap:
+          name: redis-config
+          defaultMode: 0666
+          items:
+            - key: "redis.conf"
+              path: "redis.conf"
+            - key: "sentinel.conf"
+              path: "sentinel.conf"
+    restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    redis_node: redis-cluster-node-2
+  name: redis-cluster-node-2
+spec:
+  ports:
+  - name: redis-server-port
+    port: 6379
+    protocol: TCP
+    targetPort: 6379
+  - name: redis-sentinel-port
+    port: 16379
+    protocol: TCP
+    targetPort: 16379
+  selector:
+    redis_node: redis-cluster-node-2

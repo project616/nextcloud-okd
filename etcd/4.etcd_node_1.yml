@@ -45,7 +45,7 @@ spec:
             value: "2380"
           - name: ETCD_DATA_DIR
             value: /var/lib/state.etcd
-          image: docker-registry.default.svc:5000/etcd/nextcloud-etcd:latest
+          image: docker-registry.default.svc:5000/nextcloud-okd/nextcloud-etcd:latest
           imagePullPolicy: IfNotPresent
           name: etcd-cluster-node-1
           livenessProbe:

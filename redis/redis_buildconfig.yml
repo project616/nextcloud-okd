@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ImageStream
+metadata:
+  name: redis-base
+spec:
+  imagePullPolicy: IfNotPresent
+  tags:
+  - annotations: null
+    from:
+      kind: DockerImage
+      name: 'docker.io/redis:3.2.0-alpine'
+    name: latest
+    referencePolicy:
+      type: "Local"
+
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  name: redis-nextcloud
+---
+
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  name: "redis-build-base"
+spec:
+  output:
+    to:
+      kind: "ImageStreamTag"
+      name: "redis-nextcloud:latest"
+  source:
+    git:
+      uri: https://github.com/project616/nextcloud-okd.git
+      ref: "master"
+      #sourceSecret:
+      #name: "buildbot-auth"
+    contextDir: redis-cluster
+  images:
+  - from:
+      kind: "ImageStreamTag"
+      name: "redis-nextcloud:latest"
+  runPolicy: "Serial"
+  strategy:
+    dockerStrategy:
+      noCache: true
+      from:
+        kind: "ImageStreamTag"
+        name: "redis-base:latest"
+  triggers:
+    - type: "ImageChange"
+    - type: "ConfigChange"
